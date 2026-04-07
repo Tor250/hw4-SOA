@@ -1,0 +1,22 @@
+@startuml
+autonumber
+actor "Банковская система" as core
+participant "API уведомлений" as api
+participant "Маршрутизатор доставки" as router
+participant "Сервис настроек" as pref
+participant "Обработчик push" as push
+participant "Провайдер push" as provider
+database "Журнал доставок" as db
+
+core -> api: создать критичное уведомление
+api -> db: сохранить notification_id и данные
+api -> router: передать задачу
+api --> core: accepted
+router -> pref: получить порядок каналов
+pref --> router: push, sms, email
+router -> push: отправить(notification_id)
+push -> provider: доставить
+provider --> push: accepted
+push --> router: success
+router -> db: mark as DELIVERED
+@enduml

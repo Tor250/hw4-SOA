@@ -1,0 +1,22 @@
+@startuml
+autonumber
+actor "Банковская система" as core
+participant "API уведомлений" as api
+participant "Сервис доставки" as delivery
+participant "Сервис настроек" as pref
+participant "Адаптер push" as push
+participant "Провайдер push" as provider
+database "Журнал доставок" as db
+
+core -> api: создать критичное уведомление
+api -> db: сохранить notification_id и данные
+api -> delivery: передать задачу
+api --> core: accepted
+delivery -> pref: получить порядок каналов
+pref --> delivery: push, sms, email
+delivery -> push: отправить(notification_id)
+push -> provider: доставить
+provider --> push: accepted
+push --> delivery: success
+delivery -> db: mark as DELIVERED
+@enduml

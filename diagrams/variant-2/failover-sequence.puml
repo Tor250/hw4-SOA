@@ -1,0 +1,27 @@
+@startuml
+autonumber
+participant "Маршрутизатор доставки" as router
+participant "Обработчик push" as push
+participant "Обработчик SMS" as sms
+participant "Провайдер push" as pprov
+participant "Провайдер SMS" as sprov
+participant "Обработчик email" as email
+participant "Провайдер email" as eprov
+database "Журнал доставок" as db
+
+router -> push: отправить(notification_id)
+push -> pprov: доставить
+pprov --> push: timeout / 5xx
+push --> router: failed
+router -> db: mark push as failed
+router -> sms: отправить(notification_id)
+sms -> sprov: доставить
+sprov --> sms: timeout / 5xx
+sms --> router: failed
+router -> db: mark SMS as failed
+router -> email: отправить(notification_id)
+email -> eprov: доставить
+eprov --> email: accepted
+email --> router: success
+router -> db: mark as DELIVERED via email
+@enduml

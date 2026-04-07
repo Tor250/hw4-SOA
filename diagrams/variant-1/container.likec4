@@ -1,0 +1,64 @@
+specification {
+  element person {
+    style { shape person color green }
+  }
+  element system {
+    style { color blue }
+  }
+  element service {
+    style { color red }
+  }
+  element database {
+    style { shape cylinder color gray }
+  }
+  element queue {
+    style { shape queue color blue }
+  }
+  element external {
+    style { color indigo border dashed }
+  }
+}
+
+model {
+  user = person 'Пользователь' 'Получает транзакционные и сервисные уведомления'
+  support = person 'Специалист поддержки' 'Смотрит статус доставки'
+  coreBanking = external 'Банковские системы' 'События по переводам, списаниям и заявкам'
+  pushProvider = external 'Push-провайдер' 'FCM / APNs'
+  smsProvider = external 'SMS-провайдер' 'Внешний SMS сервис'
+  emailProvider = external 'Email-провайдер' 'Внешний email сервис'
+
+  notificationPlatform = system 'Платформа уведомлений' 'Единая платформа уведомлений' {
+    api = service 'API уведомлений' 'Принимает событие и создает запись на доставку' 'Java'
+    preferenceService = service 'Сервис настроек' 'Правила по каналам и типам уведомлений' 'Java'
+    deliveryService = service 'Сервис доставки' 'Выбирает канал, делает повторные попытки и переключение' 'Java'
+    ledger = database 'Журнал доставок' 'Журнал доставок и статусы' 'PostgreSQL'
+    cache = service 'Кэш' 'Быстрый доступ к настройкам' 'Redis'
+    queue = queue 'Очередь доставки' 'Очередь задач на доставку' 'RabbitMQ'
+    pushAdapter = service 'Адаптер push' 'Отправка в push' 'Java'
+    smsAdapter = service 'Адаптер SMS' 'Отправка в SMS' 'Java'
+    emailAdapter = service 'Адаптер email' 'Отправка в email' 'Java'
+  }
+
+  user -> notificationPlatform 'Получает уведомления'
+  support -> notificationPlatform 'Проверяет статусы'
+  coreBanking -> api 'Отправляет событие'
+  api -> ledger 'Сохраняет уведомление'
+  api -> queue 'Ставит задачу'
+  queue -> deliveryService 'Передает задачу'
+  deliveryService -> preferenceService 'Читает настройки'
+  preferenceService -> cache 'Кэширует настройки'
+  deliveryService -> pushAdapter 'Пробует push'
+  deliveryService -> smsAdapter 'Пробует SMS'
+  deliveryService -> emailAdapter 'Пробует email'
+  pushAdapter -> pushProvider 'Отправляет'
+  smsAdapter -> smsProvider 'Отправляет'
+  emailAdapter -> emailProvider 'Отправляет'
+  deliveryService -> ledger 'Обновляет статус'
+}
+
+views {
+  view container {
+    title 'Notification Platform - Container'
+    include *
+  }
+}

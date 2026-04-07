@@ -1,0 +1,28 @@
+@startuml
+autonumber
+participant "Сервис доставки" as delivery
+participant "Адаптер push" as push
+participant "Адаптер SMS" as sms
+participant "Адаптер email" as email
+participant "Провайдер push" as pprov
+participant "Провайдер SMS" as sprov
+participant "Провайдер email" as eprov
+database "Журнал доставок" as db
+
+delivery -> push: отправить(notification_id)
+push -> pprov: доставить
+pprov --> push: timeout / 5xx
+push --> delivery: failed
+delivery -> db: mark push as failed
+delivery -> push: retry once
+push -> pprov: доставить
+pprov --> push: timeout / 5xx
+push --> delivery: failed
+delivery -> db: switch to SMS
+delivery -> sms: отправить(notification_id)
+sms -> sprov: доставить
+sprov --> sms: accepted
+sms --> delivery: success
+delivery -> db: mark as DELIVERED via SMS
+delivery -> email: stop further attempts
+@enduml

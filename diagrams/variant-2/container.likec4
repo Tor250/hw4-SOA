@@ -1,0 +1,70 @@
+specification {
+  element person {
+    style { shape person color green }
+  }
+  element system {
+    style { color blue }
+  }
+  element service {
+    style { color red }
+  }
+  element database {
+    style { shape cylinder color gray }
+  }
+  element queue {
+    style { shape queue color blue }
+  }
+  element external {
+    style { color indigo border dashed }
+  }
+}
+
+model {
+  user = person 'Пользователь' 'Получает транзакционные и сервисные уведомления'
+  support = person 'Специалист поддержки' 'Смотрит статус доставки'
+  coreBanking = external 'Банковские системы' 'События по переводам, списаниям и заявкам'
+  pushProvider = external 'Push-провайдер' 'FCM / APNs'
+  smsProvider = external 'SMS-провайдер' 'Внешний SMS сервис'
+  emailProvider = external 'Email-провайдер' 'Внешний email сервис'
+
+  notificationPlatform = system 'Платформа уведомлений' 'Единая платформа уведомлений' {
+    api = service 'API уведомлений' 'Принимает событие и создает запись на доставку' 'Java'
+    router = service 'Маршрутизатор доставки' 'Выбирает канал и строит план доставки' 'Java'
+    preferenceService = service 'Сервис настроек' 'Правила по каналам и типам уведомлений' 'Java'
+    ledger = database 'Журнал доставок' 'Журнал доставок и статусы' 'PostgreSQL'
+    cache = service 'Кэш' 'Быстрый доступ к настройкам' 'Redis'
+    pushQueue = queue 'Очередь push' 'Задачи на push' 'RabbitMQ'
+    smsQueue = queue 'Очередь SMS' 'Задачи на SMS' 'RabbitMQ'
+    emailQueue = queue 'Очередь email' 'Задачи на email' 'RabbitMQ'
+    pushWorker = service 'Обработчик push' 'Отправка в push' 'Java'
+    smsWorker = service 'Обработчик SMS' 'Отправка в SMS' 'Java'
+    emailWorker = service 'Обработчик email' 'Отправка в email' 'Java'
+  }
+
+  user -> notificationPlatform 'Получает уведомления'
+  support -> notificationPlatform 'Проверяет статусы'
+  coreBanking -> api 'Отправляет событие'
+  api -> ledger 'Сохраняет уведомление'
+  api -> router 'Передает задачу'
+  router -> preferenceService 'Читает настройки'
+  preferenceService -> cache 'Кэширует настройки'
+  router -> pushQueue 'Планирует push'
+  router -> smsQueue 'Планирует SMS'
+  router -> emailQueue 'Планирует email'
+  pushQueue -> pushWorker 'Передает задачу'
+  smsQueue -> smsWorker 'Передает задачу'
+  emailQueue -> emailWorker 'Передает задачу'
+  pushWorker -> pushProvider 'Отправляет'
+  smsWorker -> smsProvider 'Отправляет'
+  emailWorker -> emailProvider 'Отправляет'
+  pushWorker -> ledger 'Обновляет статус'
+  smsWorker -> ledger 'Обновляет статус'
+  emailWorker -> ledger 'Обновляет статус'
+}
+
+views {
+  view container {
+    title 'Notification Platform - Container'
+    include *
+  }
+}
